@@ -356,7 +356,8 @@ const ApplicationForm = () => {
         const { data, error } = await supabase
           .from('applications')
           .select('regNo')
-          .eq('regNo', formData.regNo.trim())
+          // Use ilike for case-insensitive matching
+          .ilike('regNo', formData.regNo.trim()) 
           .single();
         
         if (error && error.code !== 'PGRST116') { // PGRST116 = 'No rows found' which is good
@@ -463,6 +464,12 @@ const ApplicationForm = () => {
         // Handle all other inputs
         newData[name] = type === 'checkbox' ? checked : value;
       }
+
+      // --- NEW: Force Register Number to Uppercase ---
+      if (name === 'regNo') {
+        newData[name] = value.toUpperCase();
+      }
+      // --- End New Logic ---
 
       // Reset role if the corresponding society changes
       if (name === 'pref1_society') newData.pref1_role = '';
