@@ -287,10 +287,10 @@ const FormInput = ({ id, label, error, children }) => (
 const ProgressBar = ({ currentStep, totalSteps }) => {
   const percentage = ((currentStep - 1) / (totalSteps - 1)) * 100;
   const steps = [
-    { number: 1, title: 'Personal' },
-    { number: 2, title: 'Preferences' },
-    { number: 3, title: 'Qualifications' },
-    { number: 4, title: 'Commitment' },
+    { number: 1, title: '' },
+    { number: 2, title: '' },
+    { number: 3, title: '' },
+    { number: 4, title: '' },
   ];
 
   return (
