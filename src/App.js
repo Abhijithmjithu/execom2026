@@ -310,12 +310,13 @@ const ApplicationForm = () => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // --- NEW: Loading state for async validation ---
 
   const totalSteps = 4;
 
   // --- Step Validation Functions ---
 
-  const validateStep1 = () => {
+  const validateStep1 = async () => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Full Name is required.';
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -347,6 +348,29 @@ const ApplicationForm = () => {
       }
     }
     // --- End Logic ---
+
+    // --- NEW: Async Check for Register Number ---
+    if (!newErrors.regNo && formData.regNo.trim()) {
+      try {
+        const { data, error } = await supabase
+          .from('applications')
+          .select('regNo')
+          .eq('regNo', formData.regNo.trim())
+          .single();
+        
+        if (error && error.code !== 'PGRST116') { // PGRST116 = 'No rows found' which is good
+          throw error;
+        }
+        
+        if (data) {
+          newErrors.regNo = 'This register number has already been used to apply.';
+        }
+      } catch (error) {
+        console.error('Error checking register number:', error.message);
+        newErrors.regNo = 'Could not verify register number. Please try again.';
+      }
+    }
+    // --- End Async Check ---
 
     return newErrors;
   };
@@ -499,11 +523,17 @@ const ApplicationForm = () => {
 
   // --- Navigation Handlers ---
 
-  const nextStep = () => {
+  const nextStep = async () => {
     let stepErrors = {};
-    if (currentStep === 1) stepErrors = validateStep1();
+    setIsLoading(true);
+    setSubmitMessage('Checking...');
+
+    if (currentStep === 1) stepErrors = await validateStep1(); // Now async
     if (currentStep === 2) stepErrors = validateStep2();
     if (currentStep === 3) stepErrors = validateStep3();
+    
+    setIsLoading(false);
+    setSubmitMessage('');
     
     setErrors(stepErrors);
     if (Object.keys(stepErrors).length === 0) {
@@ -525,15 +555,18 @@ const ApplicationForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitMessage('');
+    setIsLoading(true); // Use isLoading for final submission as well
 
     // Re-validate all steps just in case
-    const step1Errors = validateStep1();
+    const step1Errors = await validateStep1(); // Now async
     const step2Errors = validateStep2();
     const step3Errors = validateStep3();
     const step4Errors = validateStep4();
 
     const allErrors = { ...step1Errors, ...step2Errors, ...step3Errors, ...step4Errors };
     setErrors(allErrors);
+    
+    setIsLoading(false);
 
     if (Object.keys(allErrors).length > 0) {
       // Find the first step with an error and go to it
@@ -652,14 +685,15 @@ const ApplicationForm = () => {
             <button
               type="button"
               onClick={nextStep}
-              className="w-full md:w-auto bg-blue-700 text-white font-bold py-3 px-10 rounded-md shadow-lg hover:bg-blue-800 transition duration-300 transform transition-transform hover:scale-105 active:scale-95"
+              disabled={isLoading} // --- NEW: Disable button while checking
+              className="w-full md:w-auto bg-blue-700 text-white font-bold py-3 px-10 rounded-md shadow-lg hover:bg-blue-800 transition duration-300 transform transition-transform hover:scale-105 active:scale-95 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              Next
+              {isLoading ? 'Checking...' : 'Next'}
             </button>
           ) : (
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isLoading}
               className="w-full md:w-auto bg-green-600 text-white font-bold py-3 px-10 rounded-md shadow-lg hover:bg-green-700 transition duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed transform transition-transform hover:scale-105 active:scale-95"
             >
               {isSubmitting ? 'Submitting...' : 'Submit Application'}
