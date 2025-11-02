@@ -105,7 +105,7 @@ const departments = [
   'CY',
   'MR',
   'RE',
-  'Other',
+  // 'Other' removed as requested
 ];
 
 // --- Roles restricted for First Years ---
@@ -140,6 +140,15 @@ const Footer = () => {
     </footer>
   );
 };
+
+// --- Base classes for inputs ---
+const inputClasses = (hasError) => 
+  `w-full p-3 border rounded-md focus:ring-2 focus:outline-none bg-white/70 backdrop-blur-sm border-gray-300/70 focus:bg-white transition-all duration-300 ${
+    hasError ? 'border-red-500 focus:ring-red-500' : 'focus:border-blue-500 focus:ring-blue-500'
+  }`;
+
+// --- Reverted select classes to default ---
+
 
 // --- Reusable Preference Selector Component ---
 // This component shows a society dropdown and a dependent role dropdown
@@ -177,7 +186,7 @@ const PreferenceSelector = ({
             name={societyName}
             value={selectedSociety}
             onChange={handleChange}
-            className={`w-full p-3 border rounded-md focus:ring-2 focus:outline-none bg-white/70 backdrop-blur-sm border-gray-300/70 focus:bg-white ${errorSociety ? 'border-red-500 focus:ring-red-500' : 'focus:border-blue-500 focus:ring-blue-500'}`}
+            className={inputClasses(errorSociety)} // Reverted to inputClasses
           >
             <option value="">-- Select an SB/SBC/AG --</option>
             {societies.map((society) => (
@@ -200,7 +209,7 @@ const PreferenceSelector = ({
             value={formData[roleName]}
             onChange={handleChange}
             disabled={!selectedSociety} // Disabled until a society is chosen
-            className={`w-full p-3 border rounded-md focus:ring-2 focus:outline-none disabled:bg-gray-100/70 bg-white/70 backdrop-blur-sm border-gray-300/70 focus:bg-white ${errorRole ? 'border-red-500 focus:ring-red-500' : 'focus:border-blue-500 focus:ring-blue-500'}`}
+            className={`${inputClasses(errorRole)} disabled:bg-gray-100/70`} // Reverted to inputClasses
           >
             <option value="">-- Select a Role --</option>
             {/* This now uses the filtered list of roles */}
@@ -276,7 +285,7 @@ const ApplicationForm = () => {
     regNo: '',
     department: '',
     year: '',
-    isMember: 'No',
+    isMember: 'Yes', // --- Default to 'Yes' ---
     membershipId: '',
     pref1_society: '',
     pref1_role: '',
@@ -285,7 +294,7 @@ const ApplicationForm = () => {
     pref3_society: '',
     pref3_role: '',
     whyApply: '',
-    prevPosition: 'No',
+    prevPosition: 'Yes', // --- Default to 'Yes' ---
     prevPositionDetails: '',
     relevantSkills: '',
     eventsParticipated: '',
@@ -295,7 +304,7 @@ const ApplicationForm = () => {
     portfolioLink: '',
     portfolioFile: null,
     declaration: false,
-    declaration_first_year_membership: false, // New state for the new checkbox
+    declaration_first_year_membership: false, 
   });
 
   const [errors, setErrors] = useState({});
@@ -325,7 +334,7 @@ const ApplicationForm = () => {
     if (!formData.department) newErrors.department = 'Please select your department.';
     if (!formData.year) newErrors.year = 'Please select your year of study.';
 
-    // --- New Membership Validation Logic ---
+    // --- Membership Validation Logic ---
     if (formData.year === 'First') {
       // First years: only check ID if they say they are a member
       if (formData.isMember === 'Yes' && !formData.membershipId.trim()) {
@@ -337,7 +346,7 @@ const ApplicationForm = () => {
         newErrors.membershipId = 'IEEE Membership ID is required.';
       }
     }
-    // --- End New Logic ---
+    // --- End Logic ---
 
     return newErrors;
   };
@@ -388,7 +397,7 @@ const ApplicationForm = () => {
       newErrors.portfolio = 'As a Media Lead applicant, please provide either a portfolio link or upload a file.';
     }
 
-    // --- NEW: Check file size on client side ---
+    // --- Check file size on client side ---
     if (formData.portfolioFile && formData.portfolioFile.size > 52428800) { // 50MB
        newErrors.portfolio = `File is too large (${(formData.portfolioFile.size / 1024 / 1024).toFixed(1)}MB). Max size is 50MB.`;
     }
@@ -432,7 +441,7 @@ const ApplicationForm = () => {
 
       // Reset role if the corresponding society changes
       if (name === 'pref1_society') newData.pref1_role = '';
-      if (name === 'pref2_society') newData.pref2_role = '';
+      if (name ==='pref2_society') newData.pref2_role = '';
       if (name === 'pref3_society') newData.pref3_role = '';
       
       // Reset membership ID if user selects "No"
@@ -440,19 +449,19 @@ const ApplicationForm = () => {
         newData.membershipId = '';
       }
 
-      // --- New Logic for Year Change ---
+      // --- Logic for Year Change ---
       if (name === 'year') {
         // If changing to 2nd/3rd year, set isMember to 'Yes' (implicitly)
         if(value === 'Second' || value === 'Third') {
           newData.isMember = 'Yes';
         }
-        // If changing to 1st year, reset isMember to 'No'
-        if(value === 'First') {
-          newData.isMember = 'No';
-          newData.membershipId = ''; // Also clear membership ID
+        // If changing *back* to 1st year from 2nd/3rd, reset to default 'Yes'
+        // but allow it to be changed by the user.
+        if(value === 'First' && (prevData.year === 'Second' || prevData.year === 'Third')) {
+          newData.isMember = 'Yes'; 
         }
       }
-      // --- End New Logic ---
+      // --- End Logic ---
 
 
       // If user changes year to "First", reset any invalid roles
@@ -550,7 +559,7 @@ const ApplicationForm = () => {
       if (formData.portfolioFile) {
         const file = formData.portfolioFile;
 
-        // --- NEW: Client-side file size check just before upload ---
+        // --- Client-side file size check just before upload ---
         if (file.size > 52428800) { // 50MB
           throw new Error(`File is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max size is 50MB.`);
         }
@@ -619,12 +628,7 @@ const ApplicationForm = () => {
                       formData.pref2_role === 'Media Lead' ||
                       formData.pref3_role === 'Media Lead';
   
-  // Base classes for inputs
-  const inputClasses = (hasError) => 
-    `w-full p-3 border rounded-md focus:ring-2 focus:outline-none bg-white/70 backdrop-blur-sm border-gray-300/70 focus:bg-white transition-all duration-300 ${
-      hasError ? 'border-red-500 focus:ring-red-500' : 'focus:border-blue-500 focus:ring-blue-500'
-    }`;
-
+  
   // --- Button Components ---
   const NavigationButtons = () => (
     <div className="p-6 bg-white/50 border-t border-white/30">
@@ -733,7 +737,7 @@ const ApplicationForm = () => {
           <select
             id="department" name="department"
             value={formData.department} onChange={handleChange}
-            className={inputClasses(errors.department)}
+            className={inputClasses(errors.department)} // Reverted
           >
             <option value="">-- Select your department --</option>
             {departments.map(dept => (<option key={dept} value={dept}>{dept}</option>))}
@@ -745,7 +749,7 @@ const ApplicationForm = () => {
           <select
             id="year" name="year"
             value={formData.year} onChange={handleChange}
-            className={inputClasses(errors.year)}
+            className={inputClasses(errors.year)} // Reverted
           >
             <option value="">-- Select your year --</option>
             <option value="First">First Year</option>
@@ -824,7 +828,7 @@ const ApplicationForm = () => {
         <p className="text-gray-600 mt-2 mb-4">
           Please select your top three preferences. Your role will be reset if you change the society.
         </p>
-        {/* --- NEW HIGHLIGHTED NOTE --- */}
+        {/* --- HIGHLIGHTED NOTE --- */}
         <div className="mt-4 p-4 bg-blue-50/70 border border-blue-200 rounded-lg">
           <p className="font-medium text-blue-800">
             Note: There may be additional selection procedures based on the roles you select.
