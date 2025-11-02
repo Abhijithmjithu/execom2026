@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 // Import our new supabase client
 import { supabase } from './supabaseClient';
 
@@ -95,6 +95,9 @@ const societyRoles = {
   ]
 };
 
+const allSocieties = Object.keys(societyRoles);
+const allRoles = [...new Set(Object.values(societyRoles).flat())].sort();
+
 const departments = [
   'CSE',
   'ECE',
@@ -104,8 +107,7 @@ const departments = [
   'AD',
   'CY',
   'MR',
-  'RE',
-  // 'Other' removed as requested
+  // 'RE' removed as requested
 ];
 
 // --- Roles restricted for First Years ---
@@ -117,14 +119,43 @@ const restrictedFirstYearRoles = [
   'Treasurer'
 ];
 
+// ##################################################################
+// #                           COMPONENTS                           #
+// ##################################################################
+
 // --- Reusable Header Component ---
-const Header = () => {
+const Header = ({ setCurrentPath, session }) => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setCurrentPath('/login');
+  };
+
   return (
     <header className="w-full bg-white/50 backdrop-blur-lg shadow-lg sticky top-0 z-50 border-b border-white/30">
-      <div className="container mx-auto flex flex-col md:flex-row items-center justify-center p-5">
-        <p className="text-xl font-bold text-blue-900">
+      <div className="container mx-auto flex flex-col md:flex-row items-center justify-between p-5">
+        <p 
+          className="text-xl font-bold text-blue-900 cursor-pointer"
+          onClick={() => setCurrentPath('/')}
+        >
           IEEE SB/SBCs/AGs Execom Selection
         </p>
+        <div>
+          {session ? (
+            <button
+              onClick={handleLogout}
+              className="text-sm font-medium text-blue-700 hover:text-blue-900"
+            >
+              Admin Logout
+            </button>
+          ) : (
+            <button
+              onClick={() => setCurrentPath('/login')}
+              className="text-sm font-medium text-blue-700 hover:text-blue-900"
+            >
+              Admin Login
+            </button>
+          )}
+        </div>
       </div>
     </header>
   );
@@ -151,7 +182,6 @@ const inputClasses = (hasError) =>
 
 
 // --- Reusable Preference Selector Component ---
-// This component shows a society dropdown and a dependent role dropdown
 const PreferenceSelector = ({
   label,
   societyName,
@@ -227,7 +257,6 @@ const PreferenceSelector = ({
 };
 
 // --- Reusable Form Input Component ---
-// This simplifies validation display
 const FormInput = ({ id, label, error, children }) => (
   <div className="relative">
     <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">
@@ -1217,14 +1246,500 @@ const ApplicationForm = () => {
   );
 };
 
-// --- Main App Component ---
-// This is the default export that renders everything
-function App() {
+// ##################################################################
+// #                       NEW ADMIN COMPONENTS                     #
+// ##################################################################
+
+// --- LOGIN PAGE ---
+const Login = ({ setCurrentPath }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+      });
+
+      if (error) throw error;
+      
+      // onAuthStateChange in App component will handle session update
+      // and redirect to admin
+      setCurrentPath('/admin');
+
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    // We use flex-col and min-h-screen to make the footer sticky
+    <div className="flex-grow container mx-auto p-4 md:p-12 max-w-md">
+      <form 
+        onSubmit={handleLogin}
+        className="bg-white/60 backdrop-blur-2xl shadow-2xl rounded-2xl overflow-hidden border border-white/40 animate-fade-in-up"
+      >
+        <div className="p-6 md:p-8">
+          <h2 className="text-3xl font-bold text-gray-900 text-center">
+            Admin Login
+          </h2>
+        </div>
+        <div className="p-6 md:p-8 pt-0 grid grid-cols-1 gap-6">
+          <FormInput id="email" label="Email" error={error}>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputClasses(error)}
+              required
+            />
+          </FormInput>
+          <FormInput id="password" label="Password" error={null}>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={inputClasses(error)}
+              required
+            />
+          </FormInput>
+        </div>
+        <div className="p-6 bg-white/50 border-t border-white/30">
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-blue-700 text-white font-bold py-3 px-10 rounded-md shadow-lg hover:bg-blue-800 transition duration-300 disabled:bg-gray-400"
+          >
+            {isLoading ? 'Logging in...' : 'Login'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+
+// --- ADMIN DASHBOARD ---
+const AdminDashboard = ({ setCurrentPath }) => {
+  const [applications, setApplications] = useState([]);
+  const [filteredApplications, setFilteredApplications] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [filters, setFilters] = useState({
+    search: '',
+    year: '',
+    department: '',
+    society: '', // <-- ADDED
+    role: '',
+  });
+  const [selectedApp, setSelectedApp] = useState(null); // For modal
+
+  // Fetch data on component mount
+  useEffect(() => {
+    const fetchApplications = async () => {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('applications')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        setError(error.message);
+        console.error("Error fetching applications:", error.message);
+      } else {
+        setApplications(data);
+        setFilteredApplications(data);
+      }
+      setIsLoading(false);
+    };
+
+    fetchApplications();
+  }, []);
+
+  // Apply filters whenever filters or applications change
+  useEffect(() => {
+    let filtered = applications;
+
+    // Search filter (Name or Reg No)
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      filtered = filtered.filter(app => 
+        app.name.toLowerCase().includes(searchTerm) ||
+        app.regNo.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    // Year filter
+    if (filters.year) {
+      filtered = filtered.filter(app => app.year === filters.year);
+    }
+
+    // Department filter
+    if (filters.department) {
+      filtered = filtered.filter(app => app.department === filters.department);
+    }
+    
+    // NEW Society filter (checks all 3 preferences)
+    if (filters.society) {
+      filtered = filtered.filter(app => 
+        app.pref1_society === filters.society ||
+        app.pref2_society === filters.society ||
+        app.pref3_society === filters.society
+      );
+    }
+
+    // Role filter (checks all 3 preferences)
+    if (filters.role) {
+      filtered = filtered.filter(app => 
+        app.pref1_role === filters.role ||
+        app.pref2_role === filters.role ||
+        app.pref3_role === filters.role
+      );
+    }
+
+    setFilteredApplications(filtered);
+  }, [filters, applications]);
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      search: '',
+      year: '',
+      department: '',
+      society: '', // <-- ADDED
+      role: '',
+    });
+  };
+
+  return (
+    <div className="flex-grow container mx-auto p-4 md:p-12 max-w-7xl animate-fade-in">
+      <div className="bg-white/60 backdrop-blur-2xl shadow-2xl rounded-2xl overflow-hidden border border-white/40">
+        
+        {/* Dashboard Header */}
+        <div className="p-6 md:p-8 border-b border-gray-300/50">
+          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="text-gray-600 mt-1">
+            {filteredApplications.length} of {applications.length} applications showing.
+          </p>
+        </div>
+
+        {/* Filter Bar */}
+        <div className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 border-b border-gray-300/50">
+          <input
+            type="text"
+            name="search"
+            placeholder="Search by Name or Reg No..."
+            value={filters.search}
+            onChange={handleFilterChange}
+            className={inputClasses(null)}
+          />
+          <select
+            name="year"
+            value={filters.year}
+            onChange={handleFilterChange}
+            className={inputClasses(null)}
+          >
+            <option value="">All Years</option>
+            <option value="First">First Year</option>
+            <option value="Second">Second Year</option>
+            <option value="Third">Third Year</option>
+          </select>
+          <select
+            name="department"
+            value={filters.department}
+            onChange={handleFilterChange}
+            className={inputClasses(null)}
+          >
+            <option value="">All Departments</option>
+            {departments.map(dept => <option key={dept} value={dept}>{dept}</option>)}
+          </select>
+          <select
+            name="society"
+            value={filters.society}
+            onChange={handleFilterChange}
+            className={inputClasses(null)}
+          >
+            <option value="">All SB/SBC/AGs</option>
+            {allSocieties.map(society => <option key={society} value={society}>{society}</option>)}
+          </select>
+          <select
+            name="role"
+            value={filters.role}
+            onChange={handleFilterChange}
+            className={inputClasses(null)}
+          >
+            <option value="">All Roles</option>
+            {allRoles.map(role => <option key={role} value={role}>{role}</option>)}
+          </select>
+          <button
+            onClick={clearFilters}
+            className="w-full bg-gray-600 text-white font-bold py-3 px-6 rounded-md shadow-lg hover:bg-gray-700 transition"
+          >
+            Clear Filters
+          </button>
+        </div>
+        
+        {/* Main Content Area */}
+        <div className="p-4 md:p-6">
+          {isLoading ? (
+            <div className="text-center p-12">
+              <p className="text-lg font-semibold text-blue-800">Loading applications...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center p-12">
+              <p className="text-lg font-semibold text-red-700">Error: {error}</p>
+            </div>
+          ) : filteredApplications.length === 0 ? (
+            <div className="text-center p-12">
+              <p className="text-lg font-semibold text-gray-700">No applications found matching your criteria.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-300/70">
+                <thead className="bg-white/20">
+                  <tr>
+                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Name</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Reg No</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Year</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Department</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Preferences</th>
+                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                      <span className="sr-only">View</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200/70 bg-white/20">
+                  {filteredApplications.map((app) => (
+                    <tr key={app.id}>
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">{app.name}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700">{app.regNo}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700">{app.year}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700">{app.department}</td>
+                      <td className="px-3 py-4 text-sm text-gray-700">
+                        <div className="font-semibold">1: {app.pref1_role}</div>
+                        <div className="text-xs">{app.pref1_society}</div>
+                        <div className="font-semibold mt-1">2: {app.pref2_role}</div>
+                        <div className="text-xs">{app.pref2_society}</div>
+                        <div className="font-semibold mt-1">3: {app.pref3_role}</div>
+                        <div className="text-xs">{app.pref3_society}</div>
+                      </td>
+                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                        <button onClick={() => setSelectedApp(app)} className="text-blue-700 hover:text-blue-900">
+                          View Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Application Details Modal */}
+      {selectedApp && (
+        <ApplicationModal app={selectedApp} onClose={() => setSelectedApp(null)} />
+      )}
+    </div>
+  );
+};
+
+// --- Application Details Modal ---
+const ApplicationModal = ({ app, onClose }) => {
+  // Helper to format text with line breaks
+  const formatText = (text) => {
+    return text.split('\n').map((line, i) => (
+      <span key={i} className="block">{line || ' '}</span>
+    ));
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+      <div 
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto m-4"
+        onClick={(e) => e.stopPropagation()} // Prevent closing on click inside
+      >
+        {/* Modal Header */}
+        <div className="flex justify-between items-center p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+          <h2 className="text-2xl font-bold text-gray-900">{app.name}</h2>
+          <button 
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div className="p-6 md:p-8 space-y-6">
+          
+          {/* Section: Personal Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <InfoItem label="Register No" value={app.regNo} />
+            <InfoItem label="Year" value={app.year} />
+            <InfoItem label="Email" value={app.email} />
+            <InfoItem label="Phone" value={app.phone} />
+            <InfoItem label="Department" value={app.department} />
+            <InfoItem label="IEEE Member" value={app.isMember} />
+            {app.membershipId && <InfoItem label="Membership ID" value={app.membershipId} />}
+          </div>
+
+          <hr className="my-6 border-gray-200" />
+          
+          {/* Section: Preferences */}
+          <div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">Preferences</h3>
+            <div className="space-y-3">
+              <InfoItem label="1st Preference" value={`${app.pref1_role} (${app.pref1_society})`} />
+              <InfoItem label="2nd Preference" value={`${app.pref2_role} (${app.pref2_society})`} />
+              <InfoItem label="3rd Preference" value={`${app.pref3_role} (${app.pref3_society})`} />
+            </div>
+          </div>
+
+          <hr className="my-6 border-gray-200" />
+          
+          {/* Section: Qualifications */}
+          <div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">Qualifications</h3>
+            <div className="space-y-4">
+              <InfoItem label="Why do you want to apply?" value={formatText(app.whyApply)} />
+              <InfoItem label="Previously held position?" value={app.prevPosition} />
+              {app.prevPosition === 'Yes' && <InfoItem label="Previous Role Details" value={formatText(app.prevPositionDetails)} />}
+              <InfoItem label="Relevant Skills" value={formatText(app.relevantSkills)} />
+              <InfoItem label="Events Participated" value={formatText(app.eventsParticipated)} />
+              <InfoItem label="Contribution Ideas" value={formatText(app.contributionIdeas)} />
+              <InfoItem label="Networking Comfort (1-5)" value={app.networkingComfort} />
+            </div>
+          </div>
+          
+          {/* Section: Media Lead */}
+          {app.portfolioLink || app.portfolio_file_url ? (
+            <>
+              <hr className="my-6 border-gray-200" />
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">Media Lead Portfolio</h3>
+                {app.portfolioLink && (
+                  <InfoItem label="Portfolio Link">
+                    <a href={app.portfolioLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
+                      {app.portfolioLink}
+                    </a>
+                  </InfoItem>
+                )}
+                {app.portfolio_file_url && (
+                  <InfoItem label="Uploaded File">
+                    <a href={app.portfolio_file_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
+                      View Uploaded File
+                    </a>
+                  </InfoItem>
+                )}
+              </div>
+            </>
+          ) : null}
+
+          {/* Section: Commitment */}
+          <hr className="my-6 border-gray-200" />
+          <div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">Commitment & Declaration</h3>
+            <InfoItem label="Commitment Rating (1-5)" value={app.commitment} />
+            <InfoItem label="Agreed to Declaration" value={app.declaration ? 'Yes' : 'No'} />
+            {app.declaration_first_year_membership && (
+              <InfoItem label="First Year Membership Pledge" value="Yes" />
+            )}
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Helper for Modal ---
+const InfoItem = ({ label, value, children }) => (
+  <div>
+    <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">{label}</h4>
+    {value ? <p className="text-base text-gray-900 break-words">{value}</p> : children}
+  </div>
+);
+
+
+// ##################################################################
+// #                       MAIN APP COMPONENT                       #
+// ##################################################################
+
+function App() {
+  const [session, setSession] = useState(null);
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setIsLoadingSession(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (_event === 'SIGNED_OUT') {
+        setCurrentPath('/login');
+      } else if (_event === 'SIGNED_IN') {
+        setCurrentPath('/admin');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Simple router logic
+  const renderPage = () => {
+    if (isLoadingSession) {
+      return (
+        <div className="flex-grow flex items-center justify-center">
+          <p className="text-lg font-semibold text-blue-800">Loading...</p>
+        </div>
+      );
+    }
+    
+    if (currentPath === '/login') {
+      return <Login setCurrentPath={setCurrentPath} />;
+    }
+    if (currentPath === '/admin') {
+      if (!session) {
+        // Redirect to login if not authenticated
+        // Use a simple effect to change path
+        setTimeout(() => setCurrentPath('/login'), 0);
+        return <Login setCurrentPath={setCurrentPath} />;
+      }
+      return <AdminDashboard setCurrentPath={setCurrentPath} />;
+    }
+    // Default to the application form
+    return <ApplicationForm />;
+  };
+
+  return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-indigo-200 bg-fixed font-inter">
-      <Header />
-      <ApplicationForm />
+      <Header setCurrentPath={setCurrentPath} session={session} />
+      <main className="flex-grow">
+        {renderPage()}
+      </main>
       <Footer />
     </div>
   );
