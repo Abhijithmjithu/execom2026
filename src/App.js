@@ -124,35 +124,51 @@ const restrictedFirstYearRoles = [
 // ##################################################################
 
 // --- Reusable Header Component ---
-const Header = ({ setCurrentPath, session }) => {
+const Header = ({ setCurrentPath, session, currentPath }) => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setCurrentPath('/login');
   };
 
+  const buttonStyle = "text-lg font-bold text-white bg-blue-700 px-4 py-2 rounded-lg shadow-md hover:bg-blue-800 transition-all duration-300";
+  const logoutButtonStyle = "text-sm font-medium text-white bg-gray-600 px-4 py-2 rounded-lg shadow-md hover:bg-gray-700 transition-all duration-300";
+
   return (
     <header className="w-full bg-white/50 backdrop-blur-lg shadow-lg sticky top-0 z-50 border-b border-white/30">
       <div className="container mx-auto flex flex-col md:flex-row items-center justify-between p-5">
-        <p 
-          className="text-xl font-bold text-blue-900 cursor-pointer"
+        <button 
+          className={buttonStyle}
           onClick={() => setCurrentPath('/')}
         >
-          IEEE SB/SBCs/AGs Execom Selection
-        </p>
-        <div>
+          Application form
+        </button>
+        <div className="mt-4 md:mt-0">
           {session ? (
-            <button
-              onClick={handleLogout}
-              className="text-sm font-medium text-blue-700 hover:text-blue-900"
-            >
-              Admin Logout
-            </button>
+            // User is logged in
+            currentPath === '/admin' ? (
+              // User is logged in AND on the admin page
+              <button
+                onClick={handleLogout}
+                className={logoutButtonStyle}
+              >
+                Admin Logout
+              </button>
+            ) : (
+              // User is logged in but NOT on the admin page (e.g., on the form)
+              <button
+                onClick={() => setCurrentPath('/admin')}
+                className={buttonStyle}
+              >
+                Admin Dashboard
+              </button>
+            )
           ) : (
+            // User is not logged in
             <button
               onClick={() => setCurrentPath('/login')}
-              className="text-sm font-medium text-blue-700 hover:text-blue-900"
+              className={buttonStyle}
             >
-              Admin Login
+              Admin Dashboard
             </button>
           )}
         </div>
@@ -1565,6 +1581,7 @@ const AdminDashboard = ({ setCurrentPath }) => {
 const ApplicationModal = ({ app, onClose }) => {
   // Helper to format text with line breaks
   const formatText = (text) => {
+    if (!text) return null;
     return text.split('\n').map((line, i) => (
       <span key={i} className="block">{line || ' '}</span>
     ));
@@ -1736,7 +1753,7 @@ function App() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-indigo-200 bg-fixed font-inter">
-      <Header setCurrentPath={setCurrentPath} session={session} />
+      <Header setCurrentPath={setCurrentPath} session={session} currentPath={currentPath} />
       <main className="flex-grow">
         {renderPage()}
       </main>
