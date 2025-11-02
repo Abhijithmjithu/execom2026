@@ -17,7 +17,7 @@ const societyRoles = {
     'Web Master',
     'Media Lead',
     'Content Lead',
-    'Membership Lead',
+    'Membership Development Lead',
     'Link Representative'
   ],
   // SBCs
@@ -78,7 +78,7 @@ const societyRoles = {
     'Treasurer',
     'Joint Secretary',
     'Project Coordinator',
-    'Membership Lead',
+    'Membership Development Lead',
     'Media Lead',
     'Content Lead'
   ],
@@ -88,8 +88,8 @@ const societyRoles = {
     'Secretary',
     'Treasurer',
     'Joint Secretary',
-    'Technical Lead',
-    'Membership Lead',
+    'Technical Coordinator',
+    'Membership Development Lead',
     'Media Lead',
     'Content Lead'
   ]
@@ -295,6 +295,7 @@ const ApplicationForm = () => {
     portfolioLink: '',
     portfolioFile: null,
     declaration: false,
+    declaration_first_year_membership: false, // New state for the new checkbox
   });
 
   const [errors, setErrors] = useState({});
@@ -323,9 +324,21 @@ const ApplicationForm = () => {
     if (!formData.regNo.trim()) newErrors.regNo = 'Register Number is required.';
     if (!formData.department) newErrors.department = 'Please select your department.';
     if (!formData.year) newErrors.year = 'Please select your year of study.';
-    if (formData.isMember === 'Yes' && !formData.membershipId.trim()) {
-      newErrors.membershipId = 'IEEE Membership ID is required.';
+
+    // --- New Membership Validation Logic ---
+    if (formData.year === 'First') {
+      // First years: only check ID if they say they are a member
+      if (formData.isMember === 'Yes' && !formData.membershipId.trim()) {
+        newErrors.membershipId = 'IEEE Membership ID is required.';
+      }
+    } else if (formData.year === 'Second' || formData.year === 'Third') {
+      // Second/Third years: ID is mandatory
+      if (!formData.membershipId.trim()) {
+        newErrors.membershipId = 'IEEE Membership ID is required.';
+      }
     }
+    // --- End New Logic ---
+
     return newErrors;
   };
 
@@ -374,6 +387,12 @@ const ApplicationForm = () => {
     if (isMediaLead && !formData.portfolioLink.trim() && !formData.portfolioFile) {
       newErrors.portfolio = 'As a Media Lead applicant, please provide either a portfolio link or upload a file.';
     }
+
+    // --- NEW: Check file size on client side ---
+    if (formData.portfolioFile && formData.portfolioFile.size > 52428800) { // 50MB
+       newErrors.portfolio = `File is too large (${(formData.portfolioFile.size / 1024 / 1024).toFixed(1)}MB). Max size is 50MB.`;
+    }
+
     return newErrors;
   };
 
@@ -381,8 +400,15 @@ const ApplicationForm = () => {
     const newErrors = {};
     if (!formData.commitment) newErrors.commitment = 'Please rate your commitment and availability.';
     if (!formData.declaration) {
-      newErrors.declaration = 'You must agree to the declaration.';
+      newErrors.declaration = 'You must agree to the main declaration.';
     }
+    
+    // --- New First Year Declaration Check ---
+    if (formData.year === 'First' && formData.isMember === 'No' && !formData.declaration_first_year_membership) {
+      newErrors.declaration_first_year_membership = 'You must agree to take membership to be considered.';
+    }
+    // --- End New Logic ---
+
     return newErrors;
   };
 
@@ -413,6 +439,21 @@ const ApplicationForm = () => {
       if (name === 'isMember' && value === 'No') {
         newData.membershipId = '';
       }
+
+      // --- New Logic for Year Change ---
+      if (name === 'year') {
+        // If changing to 2nd/3rd year, set isMember to 'Yes' (implicitly)
+        if(value === 'Second' || value === 'Third') {
+          newData.isMember = 'Yes';
+        }
+        // If changing to 1st year, reset isMember to 'No'
+        if(value === 'First') {
+          newData.isMember = 'No';
+          newData.membershipId = ''; // Also clear membership ID
+        }
+      }
+      // --- End New Logic ---
+
 
       // If user changes year to "First", reset any invalid roles
       if (name === 'year' && value === 'First') {
@@ -508,6 +549,12 @@ const ApplicationForm = () => {
       // 1. Handle File Upload (if one exists)
       if (formData.portfolioFile) {
         const file = formData.portfolioFile;
+
+        // --- NEW: Client-side file size check just before upload ---
+        if (file.size > 52428800) { // 50MB
+          throw new Error(`File is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max size is 50MB.`);
+        }
+
         // Create a unique file path
         const filePath = `portfolios/${Date.now()}_${file.name}`;
 
@@ -516,6 +563,10 @@ const ApplicationForm = () => {
           .upload(filePath, file);
 
         if (storageError) {
+          // Check if it's a file size error from the server
+          if (storageError.message.includes('File size exceeds')) {
+            throw new Error('File is too large. Max size is 50MB.');
+          }
           throw storageError;
         }
 
@@ -546,7 +597,7 @@ const ApplicationForm = () => {
 
       // 5. Success!
       setIsSubmitting(false);
-      setSubmitMessage('Application submitted successfully! We will get back to you soon.');
+      // setSubmitMessage is handled by renderSuccessMessage now
       setCurrentStep(5); // Show success message
 
     } catch (error) {
@@ -554,6 +605,11 @@ const ApplicationForm = () => {
       console.error('Error submitting form:', error.message);
       setIsSubmitting(false);
       setSubmitMessage(`Error submitting application: ${error.message}. Please try again.`);
+      // If it was a portfolio error, go to that step
+      if (error.message.includes('File is too large')) {
+        setCurrentStep(3);
+        setErrors({ ...errors, portfolio: error.message });
+      }
     }
     // --- END: Supabase Logic ---
   };
@@ -698,32 +754,50 @@ const ApplicationForm = () => {
           </select>
         </FormInput>
 
-        {/* IEEE Member? */}
-        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormInput id="isMember" label="Are you an IEEE Member?" error={errors.isMember}>
-            <div className="flex gap-x-6 mt-2">
-              <label className="flex items-center">
-                <input
-                  type="radio" name="isMember" value="Yes"
-                  checked={formData.isMember === 'Yes'} onChange={handleChange}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                />
-                <span className="ml-2 text-sm text-gray-700">Yes</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="radio" name="isMember" value="No"
-                  checked={formData.isMember === 'No'} onChange={handleChange}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                />
-                <span className="ml-2 text-sm text-gray-700">No</span>
-              </label>
-            </div>
-          </FormInput>
+        {/* --- NEW CONDITIONAL MEMBERSHIP SECTION --- */}
 
-          {/* IEEE Membership ID (Conditional) */}
-          {formData.isMember === 'Yes' && (
-            <FormInput id="membershipId" label="IEEE Membership ID" error={errors.membershipId}>
+        {/* For First Years: Ask if member */}
+        {formData.year === 'First' && (
+          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormInput id="isMember" label="Are you an IEEE Member?" error={errors.isMember}>
+              <div className="flex gap-x-6 mt-2">
+                <label className="flex items-center">
+                  <input
+                    type="radio" name="isMember" value="Yes"
+                    checked={formData.isMember === 'Yes'} onChange={handleChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Yes</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio" name="isMember" value="No"
+                    checked={formData.isMember === 'No'} onChange={handleChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">No</span>
+                </label>
+              </div>
+            </FormInput>
+
+            {/* If First Year AND Member: Ask for ID */}
+            {formData.isMember === 'Yes' && (
+              <FormInput id="membershipId" label="IEEE Membership ID" error={errors.membershipId}>
+                <input
+                  type="text" id="membershipId" name="membershipId"
+                  value={formData.membershipId} onChange={handleChange}
+                  placeholder="Enter your membership ID"
+                  className={inputClasses(errors.membershipId)}
+                />
+              </FormInput>
+            )}
+          </div>
+        )}
+
+        {/* For Second/Third Years: ID is mandatory */}
+        {(formData.year === 'Second' || formData.year === 'Third') && (
+          <div className="md:col-span-2">
+            <FormInput id="membershipId" label="IEEE Membership ID (Mandatory)" error={errors.membershipId}>
               <input
                 type="text" id="membershipId" name="membershipId"
                 value={formData.membershipId} onChange={handleChange}
@@ -731,8 +805,11 @@ const ApplicationForm = () => {
                 className={inputClasses(errors.membershipId)}
               />
             </FormInput>
-          )}
-        </div>
+          </div>
+        )}
+        
+        {/* --- END NEW SECTION --- */}
+
       </div>
     </div>
   );
@@ -747,6 +824,12 @@ const ApplicationForm = () => {
         <p className="text-gray-600 mt-2 mb-4">
           Please select your top three preferences. Your role will be reset if you change the society.
         </p>
+        {/* --- NEW HIGHLIGHTED NOTE --- */}
+        <div className="mt-4 p-4 bg-blue-50/70 border border-blue-200 rounded-lg">
+          <p className="font-medium text-blue-800">
+            Note: There may be additional selection procedures based on the roles you select.
+          </p>
+        </div>
       </div>
 
       <div className="p-6 md:p-8 pt-0 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -924,14 +1007,14 @@ const ApplicationForm = () => {
             </div>
 
             <div className="md:col-span-2">
-              <FormInput id="portfolioFile" label="Upload Best Works (image, video, or .pdf)" error={null}>
+              <FormInput id="portfolioFile" label="Upload Best Works (image, video, or .pdf - Max 50MB)" error={null}>
                 <input
                   type="file" id="portfolioFile" name="portfolioFile"
                   onChange={handleChange}
                   className={`w-full p-3 border rounded-md focus:ring-2 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-blue-50/70 file:text-blue-700 hover:file:bg-blue-100/70 bg-white/70 backdrop-blur-sm border-gray-300/70 focus:bg-white ${errors.portfolio ? 'border-red-500 focus:ring-red-500' : 'focus:border-blue-500 focus:ring-blue-500'}`}
                   accept="image/*,video/*,.pdf"
                 />
-                <p className="text-sm text-gray-500 mt-1">Tip: You can upload image, video, or PDF files.</p>
+                <p className="text-sm text-gray-500 mt-1">Tip: You can upload image, video, or PDF files. Max 50MB.</p>
               </FormInput>
             </div>
           </>
@@ -1019,23 +1102,43 @@ const ApplicationForm = () => {
           </div>
         </div>
         {errors.declaration && <p className="text-red-500 text-sm mt-1 md:col-span-2">{errors.declaration}</p>}
+        
+        {/* --- NEW First Year Membership Declaration --- */}
+        {formData.year === 'First' && formData.isMember === 'No' && (
+          <div className="md:col-span-2 flex items-start mt-4 p-4 bg-blue-50/70 border border-blue-200 rounded-lg">
+            <div className="flex items-center h-5">
+              <input
+                id="declaration_first_year_membership" name="declaration_first_year_membership" type="checkbox"
+                checked={formData.declaration_first_year_membership} onChange={handleChange}
+                className="focus:ring-blue-500 h-5 w-5 text-blue-600 border-gray-300 rounded"
+              />
+            </div>
+            <div className="ml-3 text-sm">
+              <label htmlFor="declaration_first_year_membership" className="font-medium text-blue-800">
+                I am not currently an IEEE member. I agree to take IEEE membership before 31 December 2025. I understand I will not be considered for the position if I fail to do so.
+              </label>
+            </div>
+          </div>
+        )}
+        {errors.declaration_first_year_membership && <p className="text-red-500 text-sm mt-1 md:col-span-2">{errors.declaration_first_year_membership}</p>}
+
       </div>
     </div>
   );
 
   const renderSuccessMessage = () => (
     <div className="animate-fade-in p-6 md:p-12 text-center">
-      <h2 className="text-3xl font-bold text-green-700 mb-4">
-        Application Submitted!
+      <h2 className="text-3xl font-bold text-green-700 mb-6">
+        🎉 Thank you for applying for the IEEE Execom 2026!
       </h2>
-      <p className="text-lg text-gray-800">
-        🎉 Thank you {formData.name} for applying for the IEEE Student Branch Execom 2026! <br/>
-
-There will be a selection procedure based on the information you’ve provided and further evaluation rounds.<br/>
-
-From this process, we will finalize the members of the IEEE SB Execom 2026.<br/>
-
-Stay tuned for further updates! 💫
+      <p className="text-lg text-gray-800 mb-4">
+        There will be a selection procedure based on the information you've provided and further evaluation rounds.
+      </p>
+      <p className="text-lg text-gray-800 mb-4">
+        From this process, we will finalize the members of the IEEE Execom 2026.
+      </p>
+      <p className="text-lg text-gray-800 font-semibold">
+        Stay tuned for further updates! 💫
       </p>
     </div>
   );
