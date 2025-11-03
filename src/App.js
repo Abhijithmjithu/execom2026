@@ -127,7 +127,7 @@ const Header = () => {
     <header className="w-full bg-white/50 backdrop-blur-lg shadow-lg sticky top-0 z-50 border-b border-white/30">
       <div className="container mx-auto flex flex-col md:flex-row items-center justify-center p-5">
         <p className="text-xl font-bold text-blue-900">
-          IEEE SB/SBCs/AGs Execom Selection
+          Application form
         </p>
       </div>
     </header>
@@ -139,7 +139,7 @@ const Footer = () => {
   return (
     <footer className="w-full bg-gray-900/20 backdrop-blur-lg text-gray-700 text-center p-6">
       <div className="container mx-auto">
-        &copy; {new Date().getFullYear()} IEEE Student Branch. All Rights Reserved.
+        &copy; {new Date().getFullYear()} IEEE JECC. All Rights Reserved.
       </div>
     </footer>
   );
@@ -1195,7 +1195,7 @@ const ApplicationForm = () => {
     <div className="flex-grow container mx-auto p-4 md:p-12 max-w-5xl">
       <div className="text-center mb-8 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
         <h1 className="text-4xl md:text-5xl font-extrabold text-blue-900">
-          IEEE Execom 2026 Selections
+          IEEE JECC Execom 2026 Selections
         </h1>
         <p className="text-lg text-gray-600 mt-2">Application Form</p>
       </div>
@@ -1245,5 +1245,4 @@ function App() {
 }
 
 export default App;
-
 
