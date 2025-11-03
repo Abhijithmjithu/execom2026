@@ -104,7 +104,8 @@ const departments = [
   'AD',
   'CY',
   'MR',
-  // 'RE' removed as requested
+  // 'RE' removed
+  // 'Other' removed as requested
 ];
 
 // --- Roles restricted for First Years ---
@@ -351,6 +352,7 @@ const ApplicationForm = () => {
     // --- End Logic ---
 
     // --- NEW: Async Check for Register Number ---
+    // Use the already uppercased value from state
     if (!newErrors.regNo && formData.regNo.trim()) {
       try {
         const { data, error } = await supabase
@@ -994,7 +996,7 @@ const ApplicationForm = () => {
 
         {/* Contribution Ideas */}
         <div className="md:col-span-2">
-          <FormInput id="contributionIdeas" label="How do you plan to contribute to IEEE SB JECC as an EXECOM member? Share any new ideas or initiatives you would like to bring forward." error={errors.contributionIdeas}>
+          <FormInput id="contributionIdeas" label="How do you plan to contribute to IEEE JECC as an EXECOM member? Share any new ideas or initiatives you would like to bring forward." error={errors.contributionIdeas}>
             <textarea
               id="contributionIdeas" name="contributionIdeas" rows="5"
               value={formData.contributionIdeas} onChange={handleChange}
@@ -1077,7 +1079,7 @@ const ApplicationForm = () => {
           Declaration & Commitment
         </h2>
           <p className="text-gray-600 mt-2 mb-4">
-          Before submitting, please review your responses carefully. By confirming below, you agree to take up responsibilities sincerely and contribute actively to IEEE SB JECC if selected as part of the EXECOM 2026 team.
+          Before submitting, please review your responses carefully. By confirming below, you agree to take up responsibilities sincerely and contribute actively to IEEE JECC if selected as part of the EXECOM 2026 team.
         </p>
       </div>
 
@@ -1143,7 +1145,7 @@ const ApplicationForm = () => {
           </div>
           <div className="ml-3 text-sm">
             <label htmlFor="declaration" className="font-medium text-gray-700">
-              I hereby declare that all the information provided above is true to the best of my knowledge. I am willing to actively contribute to IEEE SB JECC if selected as a member of EXECOM 2026.
+              I hereby declare that all the information provided above is true to the best of my knowledge. I am willing to actively contribute to IEEE JECC if selected as a member of EXECOM 2026.
             </label>
           </div>
         </div>
@@ -1243,4 +1245,5 @@ function App() {
 }
 
 export default App;
+
 
