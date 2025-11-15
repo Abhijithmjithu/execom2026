@@ -99,6 +99,7 @@ const societyRoles = {
 const roleDescriptions = [
   {
     name: "IEEE SB JECC (Student Branch)",
+    logoUrl: "https://placehold.co/100x100/eeeeee/3B82F6?text=SB+JECC",
     description: "The IEEE SB JECC is the core of our campus community. It's the parent organization that supports all our technical and non-technical activities, giving members access to funding, resources, and a network of peers and mentors to build their skills outside the classroom.",
     roles: [
       { name: "Chair", description: "Serve as the primary leader and manager of the Student Branch. Run all official meetings of the branch and the executive committee. Act as the main contact for faculty, industry professionals, and the wider IEEE section. Arrange for the election of new officers annually and report them via vTools Officer Reporting." },
@@ -118,6 +119,7 @@ const roleDescriptions = [
   },
   {
     name: "IEEE PELS SBC JECC (Power Electronics Society Student Branch Chapter)",
+    logoUrl: "https://placehold.co/100x100/eeeeee/3B82F6?text=PELS",
     description: "The IEEE PELS SBC JECC is the SBC for the Power Electronics Society (PELS), one of the fastest-growing technical societies within IEEE. Its field of interest involves the \"efficient conversion, control, and condition of electric power\" to promote the sustainable use of energy.",
     roles: [
       { name: "Chair", description: "Serve as the primary leader and manager of the PELS SBC. Run all official meetings of the PELS SBC and its executive committee. Act as the main contact for faculty, PELS members, and the wider IEEE section. Arrange for the election of new officers annually and report them via vTools Officer Reporting." },
@@ -132,6 +134,7 @@ const roleDescriptions = [
   },
   {
     name: "IEEE IAS SBC JECC (Industry Applications Society Student Branch Chapter)",
+    logoUrl: "https://placehold.co/100x100/eeeeee/3B82F6?text=IAS",
     description: "The IEEE IAS SBC JECC is the SBC for the Industry Applications Society (IAS). IAS focuses specifically on the \"unique needs of industry and commerce\" and is known for \"bridging theory and practice\" by advancing the application of electrical systems to industrial processes.",
     roles: [
       { name: "Chair", description: "Serve as the primary leader and manager of the IAS SBC. Run all official meetings of the IAS SBC and its executive committee. Act as the main contact for faculty, IAS members, and industrial partners. Arrange for the election of new officers annually and report them via vTools Officer Reporting." },
@@ -146,6 +149,7 @@ const roleDescriptions = [
   },
   {
     name: "IEEE IES SBC JECC (Industrial Electronics Society Student Branch Chapter)",
+    logoUrl: "https://placehold.co/100x100/eeeeee/3B82F6?text=IES",
     description: "The IEEE IES SBC JECC is the SBC for the Industrial Electronics Society (IES). The IES field of interest covers the \"theory and applications of electronics, controls, communications, instrumentation, and computational intelligence to industrial and manufacturing systems and processes\".",
     roles: [
       { name: "Chair", description: "Serve as the primary leader and manager of the IES SBC. Run all official meetings of the IES SBC and its executive committee. Act as the main contact for faculty, IES members, and industrial partners. Arrange for the election of new officers annually and report them via vTools Officer Reporting." },
@@ -160,6 +164,7 @@ const roleDescriptions = [
   },
   {
     name: "IEEE PES SBC JECC (Power & Energy Society Student Branch Chapter)",
+    logoUrl: "https://placehold.co/100x100/eeeeee/3B82F6?text=PES",
     description: "The IEEE PES SBC JECC is the SBC for the Power & Energy Society (PES). As the oldest IEEE society, PES is the \"premier provider of scientific and engineering information on electric power and energy\" and focuses on advancements in energy resources, smart grid, and smart cities.",
     roles: [
       { name: "Chair", description: "Serve as the primary leader and manager of the PES SBC. Run all official meetings of the PES SBC and its executive committee. Act as the main contact for faculty, PES members, and energy industry professionals. Arrange for the election of new officers annually and report them via vTools Officer Reporting." },
@@ -174,6 +179,7 @@ const roleDescriptions = [
   },
   {
     name: "IEEE SPS SBC JECC (Signal Processing Society Student Branch Chapter)",
+    logoUrl: "https://placehold.co/100x100/eeeeee/3B82F6?text=SPS",
     description: "The IEEE SPS SBC JECC is the SBC for the Signal Processing Society (SPS). As IEEE's first technical society, SPS is dedicated to \"advancing the field of signal processing,\" the enabling technology for analyzing and interpreting information from signals.",
     roles: [
       { name: "Chair", description: "Serve as the primary leader and manager of the SPS SBC. Run all official meetings of the SPS SBC and its executive committee. Act as the main contact for faculty, SPS members, and industry professionals. Arrange for the election of new officers annually and report them via vTools Officer Reporting." },
@@ -187,6 +193,7 @@ const roleDescriptions = [
   },
   {
     name: "IEEE SIGHT AG JECC (Special Interest Group on Humanitarian Technology Affinity Group)",
+    logoUrl: "https://placehold.co/100x100/eeeeee/3B82F6?text=SIGHT",
     description: "The IEEE SIGHT AG JECC is the AG for the Special Interest Group on Humanitarian Technology (SIGHT). This is a network of volunteers dedicated to partnering with underserved communities and local organizations, using technology to solve real-world problems and create a sustainable social impact.",
     roles: [
       { name: "Chair", description: "Serve as the primary leader and manager of the SIGHT AG. Run all official meetings of the SIGHT AG and its executive committee. Act as the main contact for faculty, SIGHT members, and community partners. Arrange for the election of new officers annually and report them via vTools Officer Reporting." },
@@ -202,6 +209,7 @@ const roleDescriptions = [
   },
   {
     name: "IEEE WIE AG JECC (Women in Engineering Affinity Group)",
+    logoUrl: "https://placehold.co/100x100/eeeeee/3B82F6?text=WIE",
     description: "The IEEE WIE AG JECC is the AG for Women in Engineering (WIE). WIE is a global network dedicated to promoting women engineers, technologists, and scientists, and inspiring girls around the world to follow their academic interests in a career in STEM.",
     roles: [
       { name: "Chair", description: "Serve as the primary leader and manager of the WIE AG. Run all official meetings of the WIE AG and its executive committee. Act as the main contact for faculty, WIE members, and professional women in industry. Arrange for the election of new officers annually and report them via vTools Officer Reporting." },
@@ -245,7 +253,6 @@ const restrictedFirstYearRoles = [
 
 // --- Reusable Header Component ---
 const Header = ({ setCurrentPath, currentPath }) => {
-  const buttonStyle = "text-lg font-bold text-white bg-blue-700 px-4 py-2 rounded-lg shadow-md hover:bg-blue-800 transition-all duration-300";
   const navButtonStyle = "text-lg font-bold text-blue-900 px-4 py-2 rounded-lg hover:bg-white/70 transition-all duration-300";
 
   return (
@@ -258,14 +265,13 @@ const Header = ({ setCurrentPath, currentPath }) => {
           IEEE JECC Execom 2026 Selections
         </button>
         <div className="mt-4 md:mt-0">
+          {/* This button is now only shown on the landing page */}
           {currentPath === '/' && (
-            <button
-              onClick={() => setCurrentPath('/apply')}
-              className={buttonStyle}
-            >
-              Apply Now
-            </button>
+            <p className="text-lg font-semibold text-gray-700 p-2 rounded-lg bg-gray-200/80">
+              Registrations are now closed.
+            </p>
           )}
+          {/* This button is shown on the apply page or success page */}
           {(currentPath === '/apply' || currentPath === '/success') && (
              <button
               onClick={() => setCurrentPath('/')}
@@ -285,7 +291,7 @@ const Footer = () => {
   return (
     <footer className="w-full bg-gray-900/20 backdrop-blur-lg text-gray-700 text-center p-6">
       <div className="container mx-auto">
-        &copy; {new Date().getFullYear()} IEEE JECC. All Rights Reserved.
+        &copy; {new Date().getFullYear()} IEEE JECC. All RightsReserved.
       </div>
     </footer>
   );
@@ -1387,12 +1393,9 @@ const LandingPage = ({ setCurrentPath }) => {
 
         {/* Apply Now Button (Top) */}
         <div className="p-6 md:p-8 pt-0 flex justify-center">
-          <button
-            onClick={() => setCurrentPath('/apply')}
-            className="text-xl font-bold text-white bg-blue-700 px-10 py-4 rounded-lg shadow-lg hover:bg-blue-800 transition-all duration-300 transform hover:scale-105"
-          >
-            Apply Now
-          </button>
+          <p className="text-lg font-semibold text-center text-gray-700 p-4 rounded-lg bg-gray-200/80 border border-gray-300">
+            Registrations are now closed. Thank you for your interest!
+          </p>
         </div>
 
         {/* Role Descriptions Accordion */}
@@ -1420,7 +1423,16 @@ const LandingPage = ({ setCurrentPath }) => {
                 >
                   {/* --- MODIFIED CONTENT --- */}
                   <div className="p-6 pt-0 space-y-6">
-                    <p className="text-gray-700 italic">{section.description}</p>
+                    <div className="flex flex-col sm:flex-row gap-6">
+                      <img 
+                        src={section.logoUrl} 
+                        alt={`${section.name} Logo`} 
+                        className="w-24 h-24 rounded-lg shadow-md bg-white p-2 object-contain mx-auto sm:mx-0 flex-shrink-0"
+                        onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/100x100/eeeeee/3B82F6?text=LOGO'; }}
+                      />
+                      <p className="text-gray-700 italic">{section.description}</p>
+                    </div>
+
                     <div className="space-y-2">
                       <h4 className="text-lg font-semibold text-gray-900 mb-2">Available Roles:</h4>
                       {/* --- NEW: Legend for first years --- */}
@@ -1455,12 +1467,9 @@ const LandingPage = ({ setCurrentPath }) => {
 
         {/* Apply Now Button (Bottom) */}
         <div className="p-6 md:p-8 pt-6 flex justify-center">
-          <button
-            onClick={() => setCurrentPath('/apply')}
-            className="text-xl font-bold text-white bg-blue-700 px-10 py-4 rounded-lg shadow-lg hover:bg-blue-800 transition-all duration-300 transform hover:scale-105"
-          >
-            Apply Now
-          </button>
+           <p className="text-lg font-semibold text-center text-gray-700 p-4 rounded-lg bg-gray-200/80 border border-gray-300">
+            Registrations are now closed. Thank you for your interest!
+          </p>
         </div>
       </div>
 
@@ -1548,6 +1557,28 @@ const SuccessPage = ({ setCurrentPath }) => (
   </div>
 );
 
+// --- NEW: Registrations Closed Page ---
+const RegistrationsClosedPage = ({ setCurrentPath }) => (
+  <div className="flex-grow container mx-auto p-4 md:p-12 max-w-5xl">
+    <div className="bg-white/60 backdrop-blur-2xl shadow-2xl rounded-2xl overflow-hidden border border-white/40 animate-fade-in-up">
+      <div className="animate-fade-in p-10 md:p-16 text-center">
+        <h2 className="text-3xl font-bold text-blue-900 mb-6">
+          Registrations are now closed.
+        </h2>
+        <p className="text-lg text-gray-800 mb-8">
+          Thank you for your interest in the IEEE JECC Execom 2026. The application period has ended.
+        </p>
+        <button
+          onClick={() => setCurrentPath('/')}
+          className="text-lg font-bold text-white bg-blue-700 px-10 py-4 rounded-lg shadow-lg hover:bg-blue-800 transition-all duration-300 transform hover:scale-105"
+        >
+          Back to Role Descriptions
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 
 // ##################################################################
 // #                       MAIN APP COMPONENT                       #
@@ -1559,7 +1590,9 @@ function App() {
 
   const renderPage = () => {
     if (currentPath === '/apply') {
-      return <ApplicationFormPage setCurrentPath={setCurrentPath} />;
+      // --- MODIFIED: Show closed page instead of form ---
+      return <RegistrationsClosedPage setCurrentPath={setCurrentPath} />;
+      // return <ApplicationFormPage setCurrentPath={setCurrentPath} />; // <-- Keep this line commented out to close registrations
     }
     if (currentPath === '/success') {
       return <SuccessPage setCurrentPath={setCurrentPath} />;
